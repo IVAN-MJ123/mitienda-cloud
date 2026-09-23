@@ -19,7 +19,8 @@ export default function Dashboard() {
       const hoyInicio = new Date(); hoyInicio.setHours(0, 0, 0, 0)
       const [{ data: ventas }, { data: fiados }, { data: productos }] = await Promise.all([
         supabase.from('ventas').select('total').eq('usuario_id', user.id).gte('fecha', hoyInicio.toISOString()),
-        supabase.from('fiados').select('saldo_pendiente').eq('usuario_id', user.id).gt('saldo_pendiente', 0),
+        // ✅ FIX: usamos 'clientes' porque ahí vive el saldo_pendiente
+        supabase.from('clientes').select('saldo_pendiente').eq('usuario_id', user.id).gt('saldo_pendiente', 0),
         supabase.from('productos').select('id, nombre, stock').eq('usuario_id', user.id).lte('stock', 5)
       ])
       setVentasHoy((ventas || []).reduce((acc, v) => acc + Number(v.total), 0))
@@ -33,7 +34,6 @@ export default function Dashboard() {
 
   const cop = (n) => n.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })
 
-  // Función para cerrar la sesión actual
   const handleCerrarSesion = async () => {
     try {
       setSaliendo(true)
@@ -52,7 +52,6 @@ export default function Dashboard() {
     }
   }
 
-  // Función para reiniciar todos los registros de la tienda
   const handleReiniciarTodo = async () => {
     const confirmacion = window.prompt(
       "⚠️ ATENCIÓN:\nEsta acción eliminará definitivamente tus productos, clientes, fiados y ventas.\n\nEscribe BORRAR (en mayúsculas) para confirmar:"
@@ -67,7 +66,7 @@ export default function Dashboard() {
     try {
       await supabase.from('abonos').delete().eq('usuario_id', user.id)
       await supabase.from('ventas').delete().eq('usuario_id', user.id)
-      await supabase.from('fiados').delete().eq('usuario_id', user.id)
+      // ✅ FIX: usamos 'clientes' (los fiados viven aquí)
       await supabase.from('clientes').delete().eq('usuario_id', user.id)
       await supabase.from('productos').delete().eq('usuario_id', user.id)
 
@@ -83,7 +82,6 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8 pb-10">
-      {/* Encabezado con bienvenida y botón para cerrar sesión */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <p className="text-inkmuted font-medium">Hola, {perfil?.nombre_negocio || 'bienvenido'}</p>
@@ -102,7 +100,6 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* Bento: una tarjeta hero grande + dos tarjetas secundarias */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div className="md:col-span-2 bg-teal text-white rounded-[2rem] p-8 relative overflow-hidden">
           <div className="flex items-center gap-2 text-white/80 text-sm font-semibold">
@@ -125,7 +122,6 @@ export default function Dashboard() {
 
       <div className="text-teal borde-toldo" />
 
-      {/* Alerta de bajo stock */}
       <div className="bg-surface rounded-3xl p-6 border border-teal-light">
         <div className="flex items-center gap-2 text-mango font-semibold mb-4">
           <AlertTriangle size={18} /> Bajo stock ({bajoStock.length})
@@ -143,7 +139,6 @@ export default function Dashboard() {
         </ul>
       </div>
 
-      {/* Tarjeta visible para limpiar datos y empezar de cero */}
       <div className="bg-surface rounded-3xl p-5 sm:p-6 border border-red-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <p className="font-semibold text-red-700 flex items-center gap-2">
